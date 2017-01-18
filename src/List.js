@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import * as firebase from 'firebase';
 import {Card, CardHeader, CardActions, CardText} from 'material-ui/Card';
+import {RadioButton, RadioButtonGroup} from 'material-ui/RadioButton';
 import TextField from 'material-ui/TextField';
 import RaisedButton from 'material-ui/RaisedButton';
 import FlatButton from 'material-ui/FlatButton';
@@ -23,21 +24,24 @@ class List extends Component {
 
     componentWillMount() {
         this.setState({
-            toDoList: [],
-            title: '',
+            questionList: [],
             status: '',
-            description: ''
+            question: ''
         });
     }
 
     componentDidMount() {
         let tempList = [];
         list.on('value', snap => {
-            this.setState({toDoList: []}, function () {
+            this.setState({questionList: []}, function () {
                 snap.forEach(function (newPerson) {
-                    tempList.push({title: newPerson.val().title, status: newPerson.val().status, description: newPerson.val().description, key: newPerson.key});
+                    tempList.push({
+                        status: newPerson.val().status,
+                        question: newPerson.val().question,
+                        key: newPerson.key
+                    });
                 });
-                this.setState({toDoList: tempList}, function () {
+                this.setState({questionList: tempList}, function () {
                     tempList = [];
                 });
 
@@ -46,35 +50,37 @@ class List extends Component {
         });
     }
 
-    setTitle(e) {
+    setQuestion(e) {
         this.setState({
-            title: e.target.value
+            question: e.target.value
         });
     }
 
-    setDescription(e) {
-        this.setState({
-            description: e.target.value
-        });
-    }
-
-    changeStatus(item, status) {
-        console.log('status: ', item, status);
-        item.status = !item.status;
-console.log('new item: ', item);
+    changeStatus(item, a, selected) {
+        let status;
+        switch(selected) {
+            case 'yes':
+                status = true;
+                break;
+            case 'no':
+                status = false;
+                break;
+            default:
+                status = 'unanswered';
+                break;
+        }
+        item.status = status;
         list.child(item.key).set(item);
     }
 
     add() {
         list.push({
-            title: this.state.title,
-            status: false,
-            description: this.state.description
+            status: 'unanswered',
+            question: this.state.question
         });
         this.setState({
-            title: '',
             status: '',
-            description: ''
+            question: ''
         });
     }
 
@@ -84,28 +90,58 @@ console.log('new item: ', item);
 
     render() {
         let self = this;
+
         return (
-            <div style={{padding: 20}}>
-                <TextField name="title" hintText="Title" onChange={this.setTitle.bind(this)} value={this.state.title}/>
-                <TextField name="description" hintText="Description" onChange={this.setDescription.bind(this)} value={this.state.description}/>
-                <RaisedButton label="Add" onClick={this.add.bind(this)}/>
-                <Divider/>
-                {this.state.toDoList.map(function (item, key) {
-                    return (
-                        <Card key={key} style={{margin: 20}}>
-                            <CardHeader
-                                title={item.title}
-                                subtitle={<Checkbox name="status" checked={item.status} onCheck={self.changeStatus.bind(this, item)}/>}
-                            />
-                            <CardText>
-                                {item.description}
-                            </CardText>
-                            <CardActions>
-                                <FlatButton label="Delete" onClick={self.remove.bind(this, item.key)} />
-                            </CardActions>
-                        </Card>
-                    )
-                })}
+            <div className="pure-g" style={{padding: 20}}>
+                <div className="pure-u-1" style={{fontSize: 30, marginBottom: 30}}>Ask Me A Question</div>
+
+                <div className="pure-u-1-2" style={{marginBottom: 30}}>
+                    <TextField name="question" hintText="Question"
+                               onChange={this.setQuestion.bind(this)} value={this.state.question}/>
+                    <RaisedButton label="Add" style={{marginLeft: 20}} onClick={this.add.bind(this)}/>
+                </div>
+                <Divider className="pure-u-1" style={{marginTop: 10, marginBottom: 10}}/>
+                <div className="pure-u-1">
+                    {this.state.questionList.map(function (item, key) {
+                        let selected;
+                        switch(item.status) {
+                            case 'unanswered':
+                                selected = false;
+                                break;
+                            case true:
+                                selected = 'yes';
+                                break;
+                            case false:
+                                selected = 'no';
+                                break;
+                        }
+
+                        return (
+                            <Card key={key} style={{margin: 20}}>
+                                <CardHeader
+                                    title={item.question} titleStyle={{fontSize: 20}}
+                                />
+                                <CardText>
+                                    <RadioButtonGroup name="status" defaultSelected={selected} onChange={self.changeStatus.bind(this, item)}>
+                                        <RadioButton
+                                            value="yes"
+                                            label="Yes"
+                                        />
+                                        <RadioButton
+                                            value="no"
+                                            label="No"
+                                        />
+                                    </RadioButtonGroup>
+
+                                    </CardText>
+                                <CardActions>
+                                    <FlatButton label="Delete" onClick={self.remove.bind(this, item.key)}/>
+                                </CardActions>
+                            </Card>
+                        )
+                    })}
+                </div>
+
             </div>
         );
     }
